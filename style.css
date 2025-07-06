@@ -1,0 +1,99 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #282c34; /* Nền tối giống hình */
+    color: #abb2bf; /* Màu chữ nhạt */
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh; /* Đảm bảo chiều cao tối thiểu để căn giữa */
+}
+
+.container {
+    background-color: #21252b; /* Nền container hơi sáng hơn body */
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    margin: 30px 20px;
+    width: 100%;
+    max-width: 900px;
+    overflow: hidden; /* Đảm bảo border-radius hoạt động */
+}
+
+.code-header {
+    background-color: #323842; /* Màu header */
+    padding: 25px 30px;
+    border-bottom: 1px solid #444;
+    text-align: center;
+}
+
+.code-header h1 {
+    margin: 0 0 5px 0;
+    font-size: 2.2em;
+    color: #61afef; /* Màu xanh sáng cho tiêu đề */
+    font-weight: 600;
+}
+
+.code-header p {
+    margin: 0;
+    font-size: 1em;
+    color: #98c379; /* Màu xanh lá cây cho mô tả */
+}
+
+.author-info {
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: #5c6370;
+}
+
+.author-info p {
+    margin: 3px 0;
+}
+
+.code-block-wrapper {
+    padding: 20px 0; /* Padding trên dưới */
+    overflow-x: auto; /* Cho phép cuộn ngang nếu code quá dài */
+}
+
+pre {
+    margin: 0; /* Loại bỏ margin mặc định của pre */
+    padding: 0 30px; /* Padding trái phải giống header */
+}
+
+code {
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; /* Font chữ code */
+    font-size: 0.95em;
+    line-height: 1.5;
+    display: block; /* Đảm bảo code chiếm toàn bộ chiều rộng */
+    white-space: pre-wrap; /* Giữ nguyên khoảng trắng và xuống dòng */
+    word-wrap: break-word; /* Ngắt từ nếu quá dài */
+}
+
+.code-footer {
+    background-color: #323842;
+    padding: 15px 30px;
+    border-top: 1px solid #444;
+    text-align: center;
+    font-size: 0.85em;
+    color: #5c6370;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .code-header h1 {
+        font-size: 1.8em;
+    }
+
+    .code-header p {
+        font-size: 0.9em;
+    }
+
+    .code-block-wrapper pre {
+        padding: 0 15px; /* Giảm padding trên mobile */
+    }
+
+    code {
+        font-size: 0.85em;
+    }
+}

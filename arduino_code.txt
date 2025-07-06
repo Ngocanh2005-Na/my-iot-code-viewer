@@ -1,0 +1,238 @@
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// Firebase Addons
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
+
+// WiFi Info
+#define WIFI_SSID "N/A"
+#define WIFI_PASSWORD "11111111"
+
+// Firebase Info
+#define API_KEY "AIzaSyAmerwMllKGTowx3aMVfIUlr7aeYCiNBWs"
+#define DATABASE_URL "https://final-project-esp32-e3bdf-default-rtdb.asia-southeast1.firebasedatabase.app/"
+
+// Firebase Instances
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+bool signupOK = false;
+
+// Cảm biến
+#define DHTPIN 14
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+#define MQ_PIN    34
+#define LDR_PIN   35
+#define SOIL_PIN  32
+#define LED_PIN   19
+#define PUMP_PIN  25
+#define BUTTON_PIN 18
+
+// LCD
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Thử 0x3F nếu không hiển thị
+
+// Trạng thái
+bool ledState = false;
+bool pumpState = false;
+bool manualMode = false;  // Biến để theo dõi chế độ manual
+
+// Button control variables
+bool lastButtonState = HIGH;
+bool currentButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50; // Giữ nguyên 50ms là ổn định
+
+// Biến cho các tác vụ định kỳ (non-blocking delays)
+unsigned long lastSensorReadTime = 0;
+const long sensorReadInterval = 1000; // Đọc cảm biến và cập nhật LCD mỗi 1 giây
+
+unsigned long lastFirebaseUpdateTime = 0;
+const long firebaseUpdateInterval = 5000; // Gửi lên Firebase mỗi 5 giây
+
+void setup() {
+  Serial.begin(115200);
+
+  // Pin setup
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(PUMP_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Sử dụng INPUT_PULLUP cho nút nhấn nối GND
+
+  dht.begin();
+  Wire.begin(21, 22); // SDA=21, SCL=22
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0); lcd.print("Starting...");
+  delay(1000); lcd.clear();
+
+  // Wi-Fi
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  lcd.setCursor(0, 0); lcd.print("Connecting WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500); Serial.print(".");
+  }
+  lcd.clear(); lcd.print("WiFi OK");
+
+  // Firebase setup
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  config.time_zone = 7;
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  if (Firebase.signUp(&config, &auth, "", "")) {
+    signupOK = true;
+    Serial.println("Firebase signup OK");
+    lcd.setCursor(0, 1); lcd.print("Firebase OK");
+    delay(1000);
+  } else {
+    Serial.printf("Firebase signup failed: %s\n", config.signer.signupError.message.c_str());
+    lcd.setCursor(0, 1); lcd.print("FB error");
+    while (true); // stop
+  }
+
+  lcd.clear();
+}
+
+// Điều khiển LED theo ánh sáng và nút nhấn
+void light_system(int lightValue) {
+  // Đọc trạng thái button với debounce
+  int reading = digitalRead(BUTTON_PIN);
+
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != currentButtonState) {
+      currentButtonState = reading;
+
+      // Chỉ toggle khi button được nhấn (HIGH -> LOW)
+      if (currentButtonState == LOW) {
+        // Button chỉ có tác dụng toggle LED trong chế độ manual (LDR từ 1000 đến 2000)
+        if (lightValue >= 1000 && lightValue <= 2000) {
+          ledState = !ledState;    // Toggle trạng thái LED
+          manualMode = true;       // Đánh dấu đang ở chế độ manual
+          Serial.print("BUTTON PRESSED - LED toggled to: ");
+          Serial.println(ledState ? "ON" : "OFF");
+        } else {
+          Serial.println("BUTTON PRESSED - Not in manual control range (LDR outside 1000-2000)");
+        }
+      }
+    }
+  }
+  lastButtonState = reading; // Cập nhật trạng thái nút nhấn trước đó
+
+  // Logic điều khiển LED
+  if (lightValue > 2000) {
+    // Chế độ tự động: Trời tối (LDR cao), bật đèn
+    if (manualMode) { // Nếu trước đó đang ở chế độ manual, chuyển sang auto
+      Serial.println("LDR > 2000: Auto mode (Dark) - Exiting manual mode.");
+      manualMode = false;
+    }
+    ledState = true;
+    //Serial.print("LED AUTO ON - Dark (LDR: "); Serial.print(lightValue); Serial.println(")");
+
+  } else if (lightValue >= 1000 && lightValue <= 2000) {
+    // Chế độ manual: LDR trong khoảng trung bình, cho phép button điều khiển
+    if (!manualMode) { // Nếu vừa vào chế độ manual
+      Serial.println("LDR 1000-2000: Manual mode - Button control enabled.");
+      // Không thay đổi ledState ở đây, nó sẽ giữ trạng thái trước đó hoặc do button toggle
+    }
+    //Serial.print("LED MANUAL MODE - Current state: ");
+    //Serial.print(ledState ? "ON" : "OFF");
+    //Serial.print(" (LDR: "); Serial.print(lightValue); Serial.println(")");
+
+  } else {
+    // Chế độ tự động: Trời sáng (LDR thấp), tắt đèn
+    if (manualMode) { // Nếu trước đó đang ở chế độ manual, chuyển sang auto
+      Serial.println("LDR < 1000: Auto mode (Bright) - Exiting manual mode.");
+      manualMode = false;
+    }
+    ledState = false;
+    //Serial.print("LED AUTO OFF - Bright (LDR: "); Serial.print(lightValue); Serial.println(")");
+  }
+
+  // Điều khiển LED dựa trên trạng thái ledState cuối cùng
+  digitalWrite(LED_PIN, ledState ? HIGH : LOW);
+
+  // Serial.print("Final LED PIN STATE: ");
+  // Serial.print(ledState ? "HIGH" : "LOW");
+  // Serial.print(" | Mode: ");
+  // Serial.println(manualMode ? "MANUAL" : "AUTO");
+}
+
+// Điều khiển bơm theo cảm biến đất
+void pump_system(int soilValue) { // Đổi tên hàm từ pump_sensor thành pump_system cho rõ ràng hơn
+  if (soilValue < 2200) {
+    pumpState = true;
+  } else {
+    pumpState = false;
+  }
+
+  digitalWrite(PUMP_PIN, pumpState ? LOW : HIGH); // LOW = bật relay (nếu là relay kích mức thấp)
+}
+
+void loop() {
+  unsigned long currentMillis = millis(); // Lấy thời gian hiện tại
+
+  // Luôn gọi hàm light_system để xử lý nút nhấn tức thì
+  int light = analogRead(LDR_PIN); // Đọc LDR mỗi vòng lặp để cập nhật chế độ
+  light_system(light);
+
+  // Đọc cảm biến và cập nhật LCD định kỳ (non-blocking)
+  if (currentMillis - lastSensorReadTime >= sensorReadInterval) {
+    lastSensorReadTime = currentMillis;
+
+    float temp = dht.readTemperature();
+    float hum  = dht.readHumidity();
+    int gas    = analogRead(MQ_PIN);
+    int soil   = analogRead(SOIL_PIN);
+
+    pump_system(soil); // Cập nhật trạng thái bơm dựa trên cảm biến đất
+
+    // In thông tin ra Serial Monitor
+    Serial.print("Temp: "); Serial.print(temp);
+    Serial.print(" | Hum: "); Serial.print(hum);
+    Serial.print(" | Soil: "); Serial.print(soil);
+    Serial.print(" | Light: "); Serial.print(light);
+    Serial.print(" | LED: "); Serial.print(ledState ? "ON" : "OFF");
+    Serial.print(" | Pump: "); Serial.println(pumpState ? "ON" : "OFF");
+
+    // Hiển thị LCD - Dòng 1: Nhiệt độ & Độ ẩm, Dòng 2: Soil & Pump
+    lcd.setCursor(0, 0);
+    lcd.print("T:"); lcd.print(temp, 1); lcd.print((char)223); lcd.print("C ");
+    lcd.print("H:"); lcd.print((int)hum); lcd.print("% ");
+
+    lcd.setCursor(0, 1);
+    lcd.print("Soil:"); lcd.print(soil); lcd.print(" ");
+    lcd.print(pumpState ? "P:ON " : "P:OFF");
+  }
+
+  // Gửi lên Firebase định kỳ (non-blocking)
+  if (Firebase.ready() && signupOK && (currentMillis - lastFirebaseUpdateTime >= firebaseUpdateInterval)) {
+    lastFirebaseUpdateTime = currentMillis;
+
+    // Đảm bảo các giá trị được gửi là giá trị mới nhất
+    float temp = dht.readTemperature();
+    float hum  = dht.readHumidity();
+    int gas    = analogRead(MQ_PIN);
+    int soil   = analogRead(SOIL_PIN);
+    int light  = analogRead(LDR_PIN); // Lấy giá trị LDR mới nhất
+
+    Firebase.RTDB.setFloat(&fbdo, "/sensor/temperature", temp);
+    Firebase.RTDB.setFloat(&fbdo, "/sensor/humidity", hum);
+    Firebase.RTDB.setInt(&fbdo, "/sensor/gas", gas);
+    Firebase.RTDB.setInt(&fbdo, "/sensor/light", light);
+    Firebase.RTDB.setInt(&fbdo, "/sensor/soil", soil);
+
+    Firebase.RTDB.setBool(&fbdo, "/device/led", ledState);
+    Firebase.RTDB.setBool(&fbdo, "/device/pump", pumpState);
+  }
+}

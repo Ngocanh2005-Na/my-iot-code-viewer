@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mã Nguồn Dự Án IoT ESP32</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="code-header">
+            <h1>Mã Nguồn Dự Án IoT ESP32</h1>
+            <p>Hệ thống giám sát và điều khiển công viên thông minh</p>
+            <div class="author-info">
+                <p>Thiết kế bởi: [Tên của bạn]</p>
+                <p>Ngày cập nhật: 06/07/2025</p>
+            </div>
+        </header>
+
+        <div class="code-block-wrapper">
+            <pre><code class="language-cpp" id="arduinoCode"></code></pre>
+        </div>
+
+        <footer class="code-footer">
+            <p>&copy; 2024 Dự án IoT Công viên thông minh. Mọi quyền được bảo lưu.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>
+        // Hàm để tải nội dung từ file arduino_code.txt và hiển thị
+        fetch('arduino_code.txt') // <-- Thay đổi đường dẫn đến file .txt
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.text();
+            })
+            .then(code => {
+                document.getElementById('arduinoCode').textContent = code;
+                hljs.highlightAll(); // Highlight lại sau khi code được tải
+            })
+            .catch(error => {
+                console.error('Error loading the code:', error);
+                document.getElementById('arduinoCode').textContent = "Error loading code. Please check console.";
+            });
+    </script>
+</body>
+</html>
