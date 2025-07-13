@@ -33,6 +33,29 @@
       margin: 0;
     }
   </style>
+  <style>
+  .code-box {
+    background-color: #fdfaf6; /* màu trắng sữa */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    font-family: 'Helvetica', Arial, sans-serif; /* THÊM FONT */
+  }
+
+  .code-box h1, .code-box h2 {
+    margin-top: 0;
+    color: #111;
+  }
+
+  .code-box pre {
+    background-color: #f5f5f5; /* màu nền cho mã code */
+    padding: 15px;
+    overflow-x: auto;
+    border-radius: 5px;
+  }
+</style>
+
 </head>
 <body>
 
@@ -41,8 +64,9 @@
   </div>
 
   <div class="right">
+    <div class="code-box">
     <h1>Project: Smart Park</h1>
-    <h2>Sinh vien thuc hien chinh: Dinh Ngoc ANh -K17 KTYS</h2>
+    <h2>Sinh vien thuc hien : Dinh Ngoc Anh -K17 KTYS</h2>
     <h2>Ngay update: 13/07/2025</h2>
     <pre><code class="language-cpp">
 #include &lt;WiFi.h&gt;
