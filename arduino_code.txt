@@ -155,7 +155,7 @@ void controlLED(int lightVal) {
 }
 
 void controlPump(int soilVal) {
-  pumpState = soilVal >3800;
+  pumpState = soilVal >3200;
   digitalWrite(PUMP_PIN, pumpState ? HIGH : LOW); // LOW = ON if relay is active-low
 }
 
