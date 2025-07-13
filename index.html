@@ -1,118 +1,102 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Smart IoT System</title>
-  <style>
-    body {
-      margin: 0;
-      display: flex;
-      height: 100vh;
-      font-family: 'Segoe UI', sans-serif;
-    }
-
-    .code-viewer {
-      width: 50%;
-      background-color: #1e1e1e;
-      color: #eee;
-      padding: 20px;
-      overflow: auto;
-    }
-
-    .dashboard {
-      width: 50%;
-      background-color: #f2f2f2;
-      padding: 20px;
-      overflow: auto;
-    }
-
-    pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-
-    .card {
-      background: white;
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      margin-bottom: 16px;
-    }
-
-    .card h2 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .card p {
-      font-size: 24px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Park Dashboard- IoT Project</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <!-- BÊN TRÁI: CODE -->
-  <div class="code-viewer">
-    <h2>📄 Mã nguồn Arduino</h2>
-    <pre id="code-display">
-// Code sẽ hiển thị ở đây bằng JavaScript
-    </pre>
-  </div>
+    <header class="dashboard-header">
+        <div class="header-content">
+            <i class="fas fa-leaf dashboard-icon"></i>
+            <h1>Smart Park </h1>
+            <p>Real-time monitoring and control system</p>
+        </div>
+        <div class="connection-status connected">
+            <span class="status-dot"></span> Connected
+        </div>
+    </header>
 
-  <!-- BÊN PHẢI: DASHBOARD -->
-  <div class="dashboard">
-    <h2>📊 Smart IoT Dashboard</h2>
+    <main class="dashboard-grid">
+        <div class="card sensor-card temperature-card">
+            <div class="icon-wrapper">
+                <i class="fas fa-thermometer-half"></i>
+            </div>
+            <div class="card-content">
+                <h3>Temperature</h3>
+                <p class="main-value"><span id="temperature">--</span>&deg;C</p>
+                <p class="description">Current area temperature</p>
+            </div>
+        </div>
 
-    <div class="card">
-      <h2>🌡️ Temperature</h2>
-      <p id="temp">-- °C</p>
-    </div>
+        <div class="card sensor-card humidity-card">
+            <div class="icon-wrapper">
+                <i class="fas fa-tint"></i>
+            </div>
+            <div class="card-content">
+                <h3>Humidity</h3>
+                <p class="main-value"><span id="humidity">--</span>%</p>
+                <p class="description">Air humidity</p>
+            </div>
+        </div>
 
-    <div class="card">
-      <h2>💧 Humidity</h2>
-      <p id="hum">-- %</p>
-    </div>
+        <div class="card sensor-card soil-card">
+            <div class="icon-wrapper">
+                <i class="fas fa-seedling"></i>
+            </div>
+            <div class="card-content">
+                <h3>Soil Moisture</h3>
+                <p class="main-value"><span id="soilMoisture">--</span></p>
+                <p class="description">Soil moisture (lower = wetter)</p>
+            </div>
+        </div>
 
-    <div class="card">
-      <h2>🌱 Soil Moisture</h2>
-      <p id="soil">--</p>
-    </div>
+        <div class="card sensor-card light-card">
+            <div class="icon-wrapper">
+                <i class="fas fa-sun"></i>
+            </div>
+            <div class="card-content">
+                <h3>Light Level</h3>
+                <p class="main-value"><span id="lightLevel">--</span></p>
+                <p class="description">Ambient light intensity</p>
+            </div>
+        </div>
 
-    <div class="card">
-      <h2>🔆 Light Level</h2>
-      <p id="light">--</p>
-    </div>
-  </div>
+        <div class="card control-card">
+            <div class="icon-wrapper">
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="card-content">
+                <h3>Device Control</h3>
+                <div class="control-item">
+                    <div class="item-info">
+                        <i class="fas fa-lightbulb"></i> LED Light
+                        <span class="status-dot" id="ledStatusDot"></span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="ledToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="control-item">
+                    <div class="item-info">
+                        <i class="fas fa-water"></i> Water Pump
+                        <span class="status-dot" id="pumpStatusDot"></span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="pumpToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </main>
 
-  <script type="module">
-    const code = `#include <WiFi.h>
-#include <Firebase_ESP_Client.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-#include <DHT.h>
-// ... phần còn lại`;
-    document.getElementById('code-display').innerText = code;
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
 
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAmerwMllKGTowx3aMVfIUlr7aeYCiNBWs",
-      databaseURL: "https://final-project-esp32-e3bdf-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    onValue(ref(db, "/sensor"), (snapshot) => {
-      const data = snapshot.val();
-      document.getElementById("temp").innerText = data.temperature + " °C";
-      document.getElementById("hum").innerText = data.humidity + " %";
-      document.getElementById("soil").innerText = data.soil;
-      document.getElementById("light").innerText = data.light;
-    });
-  </script>
+    <script src="main.js"></script>
 </body>
 </html>
